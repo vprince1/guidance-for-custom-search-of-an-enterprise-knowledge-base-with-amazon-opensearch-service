@@ -62,7 +62,7 @@ class BedrockStack(Stack):
         bedrock_resource = bedrock_api.root.add_resource(
             'bedrock',
             default_cors_preflight_options=apigw.CorsOptions(
-                allow_methods=['GET', 'OPTIONS'],
+                allow_methods=['GET','POST','OPTIONS'],
                 allow_origins=apigw.Cors.ALL_ORIGINS)
         )
 
@@ -81,6 +81,19 @@ class BedrockStack(Stack):
 
         bedrock_resource.add_method(
             'GET',
+            bedrock_integration,
+            method_responses=[
+                apigw.MethodResponse(
+                    status_code="200",
+                    response_parameters={
+                        'method.response.header.Access-Control-Allow-Origin': True
+                    }
+                )
+            ]
+        )
+        
+        bedrock_resource.add_method(
+            'POST',
             bedrock_integration,
             method_responses=[
                 apigw.MethodResponse(

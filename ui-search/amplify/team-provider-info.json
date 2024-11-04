@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-uisearch-dev-7d922-authRole",
+      "UnauthRoleArn": "arn:aws:iam::513489159680:role/amplify-uisearch-dev-7d922-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::513489159680:role/amplify-uisearch-dev-7d922-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-uisearch-dev-7d922-deployment",
+      "UnauthRoleName": "amplify-uisearch-dev-7d922-unauthRole",
+      "StackName": "amplify-uisearch-dev-7d922",
+      "StackId": "arn:aws:cloudformation:us-east-1:513489159680:stack/amplify-uisearch-dev-7d922/af0caef0-8f7e-11ef-91a1-0ef974853f09",
+      "AmplifyAppId": "dh6zmacuu5efn"
+    },
+    "categories": {
+      "hosting": {
+        "amplifyhosting": {
+          "appId": "dh6zmacuu5efn",
+          "type": "manual"
+        }
+      }
+    }
+  }
+}

@@ -15,34 +15,49 @@ boto3_bedrock = boto3.client(
 def lambda_handler(event, context):
     
     print("event:",event)
-    print("boto3_bedrock:",boto3_bedrock)
-    prompt_data = """hello"""
+
+    httpMethod = 'GET'
+    if 'httpMethod' in event.keys():
+        httpMethod = event['httpMethod']
+    print('httpMethod:',httpMethod)
     
-    prompt=prompt_data
-    if "prompt" in event['queryStringParameters'].keys():
-        prompt = event['queryStringParameters']['prompt']
+    evt_para = {}
+    if httpMethod == 'GET':
+        evt_para = json.loads(event['queryStringParameters'])
+    elif httpMethod == 'POST':
+        evt_para = json.loads(event['body'])
+
+    prompt=''
+    if "prompt" in evt_para.keys():
+        prompt = evt_para['prompt']
     print('prompt:',prompt)
     
     max_tokens=512
-    if "max_tokens" in event['queryStringParameters'].keys():
-        max_tokens = int(event['queryStringParameters']['max_tokens'])
+    if "max_tokens" in evt_para.keys():
+        max_tokens = int(evt_para['max_tokens'])
     print('max_tokens:',max_tokens)
         
     modelId = 'anthropic.claude-v2'
-    if "modelId" in event['queryStringParameters'].keys():
-        modelId = event['queryStringParameters']['modelId']
+    if "modelId" in evt_para.keys():
+        modelId = evt_para['modelId']
     print('modelId:',modelId)
         
     temperature=0.01
-    if "temperature" in event['queryStringParameters'].keys():
-        temperature = float(event['queryStringParameters']['temperature'])
+    if "temperature" in evt_para.keys():
+        temperature = float(evt_para['temperature'])
     print('temperature:',temperature)
+
+    system=''
+    if "system" in evt_para.keys():
+        system = evt_para['system']
+    print('system:',system)
     
     provider = modelId.split(".")[0]
-    params = {"max_tokens": max_tokens,"temperature": temperature}
+    params = {"max_tokens": max_tokens,"temperature": temperature,"system":system}
     params["modelId"] = modelId
     input_body = BedrockAdapter.prepare_input(provider, prompt, params)
     body = json.dumps(input_body)
+    print('body:',body)
         
     accept = "application/json"
     if modelId == 'meta.llama2-13b-chat-v1':

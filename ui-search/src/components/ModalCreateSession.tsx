@@ -48,6 +48,7 @@ const OPTIONS_LANGUAGE = [
   { label: 'English', value: 'english' },
 ] as const;
 
+
 export type ISearchMethodValues = (typeof SEARCH_METHOD)[number]['value'];
 const SEARCH_METHOD = [
   { label: 'vector', value: 'vector' },
@@ -96,6 +97,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
   const [language, setLanguage] = useState<ILanguageValues>(
     OPTIONS_LANGUAGE[0].value
   );
+
   useLsAppConfigs();
 
   const [
@@ -241,6 +243,7 @@ export default function ModalCreateSession({ dismissModal, modalVisible }) {
       if (llmData !== undefined) setLLMData(llmData);
       if (role !== undefined) setRole(role);
       if (language !== undefined) setLanguage(language);
+  
       if (taskDefinition !== undefined) setTaskDefinition(taskDefinition);
       if (outputFormat !== undefined) setOutputFormat(outputFormat);
 

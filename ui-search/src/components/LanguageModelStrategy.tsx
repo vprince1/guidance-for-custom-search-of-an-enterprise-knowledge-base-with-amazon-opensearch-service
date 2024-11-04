@@ -47,36 +47,6 @@ const THIRD_PARTY_API_MODEL_NAMES = [
   { label: 'Baichuan2-53B', value: 'Baichuan2-53B', modelType: ['llm_api'] },
   { label: 'Baichuan2-192k', value: 'Baichuan2-192k', modelType: ['llm_api'] },
   {
-    label: 'anthropic.claude-v2',
-    value: 'anthropic.claude-v2',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'anthropic.claude-v2:1',
-    value: 'anthropic.claude-v2:1',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'anthropic.claude-v1',
-    value: 'anthropic.claude-v1',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'anthropic.claude-instant-v1',
-    value: 'anthropic.claude-instant-v1',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'meta.llama2-13b-chat-v1',
-    value: 'meta.llama2-13b-chat-v1',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
-    label: 'anthropic.claude-3-opus',
-    value: 'anthropic.claude-3-opus-20240229-v1:0',
-    modelType: ['bedrock', 'bedrock_api'],
-  },
-  {
     label: 'anthropic.claude-3-sonnet',
     value: 'anthropic.claude-3-sonnet-20240229-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
@@ -92,13 +62,29 @@ const THIRD_PARTY_API_MODEL_NAMES = [
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
-    label: 'mistral.mistral-7b',
-    value: 'mistral.mistral-7b-instruct-v0:2',
+    label: 'anthropic.claude-3-opus',
+    value: 'anthropic.claude-3-opus-20240229-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
-    label: 'mistral.mixtral-8x7b',
-    value: 'mistral.mixtral-8x7b-instruct-v0:1',
+    label: 'meta.llama3-8b',
+    value: 'meta.llama3-8b-instruct-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'meta.llama3-70b',
+    value: 'meta.llama3-70b-instruct-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+
+  {
+    label: 'mistral.mistral-small',
+    value: 'mistral.mistral-small-2402-v1:0',
+    modelType: ['bedrock', 'bedrock_api'],
+  },
+  {
+    label: 'mistral.mixtral-large',
+    value: 'mistral.mistral-large-2402-v1:0',
     modelType: ['bedrock', 'bedrock_api'],
   },
   {
@@ -131,13 +117,23 @@ const LanguageModelStrategy: React.FC = () => {
     bindIsSagemakerStreaming,
     resetIsSagemakerStreaming,
   ] = useToggle(true);
+
   const [embeddingEndpoint, bindEmbeddingEndpoint, resetEmbeddingEndpoint] =
     useInput('');
+  const [rerankerEndpoint, bindRerankerEndpoint, resetRerankerEndpoint] =
+    useInput('');
+
   const [
     thirdPartyEmbeddingEndpoint,
     bindThirdPartyEmbeddingEndpoint,
     resetThirdPartyEmbeddingEmbeddingEndpoint,
   ] = useInput('');
+  const [
+    thirdPartyRerankerEndpoint,
+    bindThirdPartyRerankerEndpoint,
+    resetThirdPartyRerankerEndpoint,
+  ] = useInput('');
+
   const [thirdPartyModelType, setThirdPartyModelType] =
     useState<IThirdPartyApiModelTypeValues>(
       THIRD_PARTY_API_MODEL_TYPES[0].value
@@ -194,6 +190,8 @@ const LanguageModelStrategy: React.FC = () => {
     resetIsSagemakerStreaming();
     resetEmbeddingEndpoint();
     resetThirdPartyEmbeddingEmbeddingEndpoint();
+    resetRerankerEndpoint();
+    resetThirdPartyRerankerEndpoint();
     setThirdPartyModelType(THIRD_PARTY_API_MODEL_TYPES[0].value);
     resetLlama2Switch();
     setSagemakerModelType(SAGEMAKER_MODEL_TYPE[0].value);
@@ -284,6 +282,14 @@ const LanguageModelStrategy: React.FC = () => {
                   },
                 },
                 {
+                  id: 'rerankerEndpoint',
+                  header: 'RerankerEndpoint',
+                  width: 200,
+                  cell: (item) => {
+                    return item.rerankerEndpoint || 'n/a';
+                  },
+                },
+                {
                   id: 'apiUrl',
                   header: 'API URL',
                   width: 200,
@@ -362,6 +368,7 @@ const LanguageModelStrategy: React.FC = () => {
                           strategyName,
                           type,
                           embeddingEndpoint,
+                          rerankerEndpoint,
                           modelType: sagemakerModelType,
                           recordId: `${sagemakerEndpoint}-${genRandomNum()}`,
                           temperature: temperature / 100,
@@ -376,6 +383,7 @@ const LanguageModelStrategy: React.FC = () => {
                           strategyName,
                           type,
                           embeddingEndpoint: thirdPartyEmbeddingEndpoint,
+                          rerankerEndpoint: thirdPartyRerankerEndpoint,
                           modelType: thirdPartyModelType,
                           modelName: thirdPartyModelName,
                           recordId: `${thirdPartyModelName}-${genRandomNum()}`,
@@ -538,6 +546,17 @@ const LanguageModelStrategy: React.FC = () => {
                       empty="No matches found"
                     />
                   </FormField>
+                  <FormField label="Reranker Endpoint">
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
+                      {...bindRerankerEndpoint}
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsEmbeddingEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
+                    />
+                  </FormField>
                 </>
               ) : (
                 // **** Third Party ***********************************************************
@@ -569,6 +588,17 @@ const LanguageModelStrategy: React.FC = () => {
                     <Autosuggest
                       enteredTextLabel={(v) => `Use: "${v}"`}
                       {...bindThirdPartyEmbeddingEndpoint}
+                      loadingText="loading endpoint list"
+                      statusType={loadingEndpointList ? 'loading' : 'finished'}
+                      options={OptionsEmbeddingEndpoint}
+                      placeholder="Search or enter value"
+                      empty="No matches found"
+                    />
+                  </FormField>
+                  <FormField label="Reranker Endpoint">
+                    <Autosuggest
+                      enteredTextLabel={(v) => `Use: "${v}"`}
+                      {...bindThirdPartyRerankerEndpoint}
                       loadingText="loading endpoint list"
                       statusType={loadingEndpointList ? 'loading' : 'finished'}
                       options={OptionsEmbeddingEndpoint}

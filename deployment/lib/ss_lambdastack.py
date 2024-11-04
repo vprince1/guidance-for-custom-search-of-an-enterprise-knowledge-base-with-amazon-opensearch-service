@@ -21,19 +21,10 @@ from aws_cdk import (
     ContextProvider,
     RemovalPolicy
 )
-# from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
-# from aws_cdk import aws_apigatewayv2_alpha as apigwv2
-from aws_cdk import (
-    aws_lambda as _lambda,
-    aws_apigatewayv2 as apigwv2,
-    aws_apigatewayv2_authorizers as authorizers,
-    aws_apigatewayv2_integrations as integrations
-)
-
-
+from aws_cdk.aws_apigatewayv2_integrations_alpha import WebSocketLambdaIntegration
+from aws_cdk import aws_apigatewayv2_alpha as apigwv2
 from aws_cdk.aws_lambda_event_sources import DynamoEventSource
 from aws_cdk.aws_lambda_event_sources import SqsEventSource
-
 import os
 
 binary_media_types = ["multipart/form-data"]
@@ -62,15 +53,9 @@ class LambdaStack(Stack):
         )
 
         print("These functions are selected (configuration is in cdk.json context 'selection'):  ", func_selection)
-        
-        if 'text_qa' in func_selection:
-            text_qa_func = self.create_text_qa_func(search_engine_key=search_engine_key)
             
-        if 'multi_modal_qa' in func_selection:
-            multi_modal_qa_func = self.create_multi_modal_qa_func(search_engine_key=search_engine_key)
 
-        # Create Lambda Function for Content Moderation
-        content_moderation_func = self.create_content_moderation_func()
+        multi_modal_qa_func = self.create_multi_modal_qa_func(search_engine_key=search_engine_key)
 
             
         # api gateway resource
@@ -143,8 +128,6 @@ class LambdaStack(Stack):
         )
         websocketdefault.add_environment("TABLE_NAME", table_name)
 
-
-
         search_function_name = 'websocket_search'
         websocketsearch = _lambda.Function(
             self, search_function_name,
@@ -157,31 +140,20 @@ class LambdaStack(Stack):
         websocketsearch.add_environment("TABLE_NAME", table_name)
         websocketsearch.add_environment("DIR_NAME", "search")
 
-        websocket_auth_function_name = 'websocket_auth'
-        websocket_auth = _lambda.Function(
-            self, websocket_auth_function_name,
-            function_name=websocket_auth_function_name,
-            runtime=_lambda.Runtime.PYTHON_3_9,
-            role=websocket_role,
-            code=_lambda.Code.from_asset('../lambda/' + websocket_auth_function_name),
-            handler='lambda_function' + '.lambda_handler',
+        #publish a new version
+        version = _lambda.Version(
+            self, "websocketsearchVersion",
+            lambda_=websocketsearch,
+            description="v1"
         )
 
-
-        #publish a new version
-        # version = _lambda.Version(
-        #     self, "websocketsearchVersion",
-        #     lambda_=websocketsearch,
-        #     description="v1"
-        # )
-
         # create an alias and provision concurrency=1
-        # websocketsearchAlias = _lambda.Alias(
-        #     self, "websocketsearchAlias",
-        #     alias_name="prod",
-        #     version=version,
-        #     provisioned_concurrent_executions=1
-        # )
+        websocketsearchAlias = _lambda.Alias(
+            self, "websocketsearchAlias",
+            alias_name="prod",
+            version=version,
+            provisioned_concurrent_executions=1
+        )
 
         web_socket_api = apigwv2.WebSocketApi(self, "websocketapi")
         apigwv2.WebSocketStage(self, "prod",
@@ -189,30 +161,18 @@ class LambdaStack(Stack):
                                stage_name="prod",
                                auto_deploy=True
                                )
-        authorizer = authorizers.WebSocketLambdaAuthorizer(
-            "WebSocketAuthorizer",
-            handler=websocket_auth
-        )
         web_socket_api.add_route("search",
-                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration", handler = websocketsearch)
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketsearchAlias)
                                  )
-        # web_socket_api.add_route("$connect",
-        #                          integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
-        #                          )
-        web_socket_api.add_route("$connect", 
-                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration",handler =  websocketconnect), 
-                                 authorizer=authorizer
-        )
-
+        web_socket_api.add_route("$connect",
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketconnect)
+                                 )
         web_socket_api.add_route("$disconnect",
-                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration", handler = websocketdisconnect)
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdisconnect)
                                  )
         web_socket_api.add_route("$default",
-                                 integration=integrations.WebSocketLambdaIntegration("SearchIntegration", handler = websocketdefault)
+                                 integration=WebSocketLambdaIntegration("SearchIntegration", websocketdefault)
                                  )
-
-
-
 
         
         # cfn output
@@ -221,29 +181,16 @@ class LambdaStack(Stack):
         cdk.CfnOutput(self, 'web_socket_api', value=web_socket_url, export_name='WebSocketApi')
 
         chat_table = self.create_chat_talbe()
-            
-        if 'text_qa' in func_selection and text_qa_func is not None:
-            text_qa_func.add_environment("api_gw", web_socket_api.api_id)
-            self.create_apigw_resource_method_for_text_qa(
-                api=api,
-                text_qa_function=text_qa_func,
-                chat_table=chat_table
-            )
-
-        if 'multi_modal_qa' in func_selection and multi_modal_qa_func is not None:
-            multi_modal_qa_func.add_environment("api_gw", web_socket_api.api_id)
-            self.create_apigw_resource_method_for_multi_modal_qa(
-                api=api,
-                multi_modal_qa_function=multi_modal_qa_func,
-                chat_table=chat_table
-            )
+        
+        multi_modal_qa_func.add_environment("api_gw", web_socket_api.api_id)
+        self.create_apigw_resource_method_for_multi_modal_qa(
+            api=api,
+            multi_modal_qa_function=multi_modal_qa_func,
+            chat_table=chat_table
+        )
 
         self.create_file_upload_prerequisites(api, search_engine_key)
 
-        self.create_apigw_resource_method_for_content_moderation(
-            api=api,
-            func=content_moderation_func
-        )
         self.create_knowledge_base_handler(api, search_engine_key)
 
         self.apigw = api
@@ -272,42 +219,6 @@ class LambdaStack(Stack):
         dynamodb_role.add_to_policy(dynamodb_role_policy)
         chat_table.grant_read_write_data(dynamodb_role)
         return chat_table
-        
-
-    def create_apigw_resource_method_for_content_moderation(self, api, func):
-
-        content_moderation_resource = api.root.add_resource(
-            'content_moderation_check',
-            default_cors_preflight_options=apigw.CorsOptions(
-                allow_methods=['GET', 'OPTIONS'],
-                allow_origins=apigw.Cors.ALL_ORIGINS)
-        )
-
-        content_moderation_integraion = apigw.LambdaIntegration(
-            func,
-            proxy=True,
-            integration_responses=[
-                apigw.IntegrationResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': "'*'"
-                    }
-                )
-            ]
-        )
-
-        content_moderation_resource.add_method(
-            'GET',
-            content_moderation_integraion,
-            method_responses=[
-                apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': True
-                    }
-                )
-            ]
-        )
 
     def define_lambda_function(self, function_name, role, timeout=10):
         lambda_function = _lambda.Function(
@@ -321,119 +232,8 @@ class LambdaStack(Stack):
             reserved_concurrent_executions=20
         )
         return lambda_function
-        
 
-    def create_text_qa_func(self, search_engine_key):
-
-        index = self.node.try_get_context("index")
-        embedding_endpoint_name = self.node.try_get_context("embedding_endpoint_name")
-        llm_endpoint_name = self.node.try_get_context("llm_endpoint_name")
-        language = self.node.try_get_context("language")
-        search_engine_opensearch = self.node.try_get_context("search_engine_opensearch")
-        search_engine_kendra = self.node.try_get_context("search_engine_kendra")
-        search_engine_zilliz = self.node.try_get_context("search_engine_zilliz")
-        zilliz_endpoint = self.node.try_get_context("zilliz_endpoint")
-        zilliz_token = self.node.try_get_context("zilliz_token")
-        bedrock_aws_region = self.node.try_get_context('bedrock_aws_region')
-
-        # configure the lambda role
-        if search_engine_kendra:
-            _text_role_policy = _iam.PolicyStatement(
-                actions=[
-                    'sagemaker:InvokeEndpointAsync',
-                    'sagemaker:InvokeEndpoint',
-                    'lambda:AWSLambdaBasicExecutionRole',
-                    'secretsmanager:SecretsManagerReadWrite',
-                    'kendra:DescribeIndex',
-                    'kendra:Query',
-                    'execute-api:*',  ##############
-                    'bedrock:*'
-                ],
-                resources=['*']  # 可根据需求进行更改
-            )
-        else:
-            _text_role_policy = _iam.PolicyStatement(
-                actions=[
-                    'sagemaker:InvokeEndpointAsync',
-                    'sagemaker:InvokeEndpoint',
-                    'lambda:AWSLambdaBasicExecutionRole',
-                    'secretsmanager:SecretsManagerReadWrite',
-                    'es:ESHttpPost',
-                    'bedrock:*',
-                    'execute-api:*'  ##############
-
-                ],
-                resources=['*']  # 可同时使用opensearch、kendra和zilliz
-            )
-        text_role = _iam.Role(
-            self, 'text_role',
-            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
-        )
-        text_role.add_to_policy(_text_role_policy)
-
-        text_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaRole")
-        )
-
-        text_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-        )
-
-        text_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("SecretsManagerReadWrite")
-        )
-
-        text_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonDynamoDBFullAccess")
-        )
-        if self.node.try_get_context('search_engine_kendra'):
-            text_role.add_managed_policy(
-                _iam.ManagedPolicy.from_aws_managed_policy_name("AmazonKendraFullAccess")
-            )
-
-        # add langchain processor for smart query and answer
-        function_name_qa = 'text_qa'
-        text_qa_function = _lambda.Function(
-            self, function_name_qa,
-            function_name=function_name_qa,
-            runtime=_lambda.Runtime.PYTHON_3_9,
-            role=text_role,
-            layers=[self.langchain_processor_qa_layer],
-            code=_lambda.Code.from_asset('../lambda/' + function_name_qa),
-            handler='lambda_function' + '.lambda_handler',
-            memory_size=256,
-            timeout=Duration.minutes(10),
-            reserved_concurrent_executions=50
-        )
-        text_qa_function.add_environment("host", search_engine_key) 
-        text_qa_function.add_environment("index", index)
-        text_qa_function.add_environment("language", language)
-        text_qa_function.add_environment("embedding_endpoint_name", embedding_endpoint_name)
-        text_qa_function.add_environment("llm_endpoint_name", llm_endpoint_name)
-        text_qa_function.add_environment("search_engine_opensearch", str(search_engine_opensearch))
-        text_qa_function.add_environment("search_engine_kendra", str(search_engine_kendra))
-        text_qa_function.add_environment("search_engine_zilliz", str(search_engine_zilliz))
-        text_qa_function.add_environment("zilliz_endpoint", str(zilliz_endpoint))
-        text_qa_function.add_environment("zilliz_token", str(zilliz_token))
-        if bedrock_aws_region:
-            text_qa_function.add_environment("bedrock_aws_region", str(bedrock_aws_region))
-
-        #publish a new version
-        version = _lambda.Version(
-            self, "TextQAVersion",
-            lambda_=text_qa_function,
-            description="v1"
-        )
-
-        # create an alias and provision concurrency=1
-        # alias = _lambda.Alias(
-        #     self, "TextQAAlias",
-        #     alias_name="prod",
-        #     version=version,
-        #     provisioned_concurrent_executions=1
-        # )
-
-        return text_qa_function
+    
 
     def create_multi_modal_qa_func(self, search_engine_key):
 
@@ -538,68 +338,14 @@ class LambdaStack(Stack):
         )
 
         # create an alias and provision concurrency=1
-        # alias = _lambda.Alias(
-        #     self, "MultiModalQAAlias",
-        #     alias_name="prod",
-        #     version=version,
-        #     provisioned_concurrent_executions=1
-        # )
+        alias = _lambda.Alias(
+            self, "MultiModalQAAlias",
+            alias_name="prod",
+            version=version,
+            provisioned_concurrent_executions=1
+        )
 
         return multi_modal_qa_function
-
-
-
-    def create_apigw_resource_method_for_text_qa(self, api, text_qa_function, chat_table):
-
-        text_qa_resource = api.root.add_resource(
-            'text_qa',
-            default_cors_preflight_options=apigw.CorsOptions(
-                allow_methods=['GET', 'OPTIONS'],
-                allow_origins=apigw.Cors.ALL_ORIGINS)
-        )
-
-        text_qa_integration = apigw.LambdaIntegration(
-            text_qa_function,
-            proxy=True,
-            integration_responses=[
-                apigw.IntegrationResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': "'*'"
-                    }
-                )
-            ]
-        )
-
-        text_qa_resource.add_method(
-            'GET',
-            text_qa_integration,
-            method_responses=[
-                apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': True
-                    }
-                )
-            ]
-        )
-        
-        text_qa_resource.add_method(
-            'POST',
-            text_qa_integration,
-            method_responses=[
-                apigw.MethodResponse(
-                    status_code="200",
-                    response_parameters={
-                        'method.response.header.Access-Control-Allow-Origin': True
-                    }
-                )
-            ]
-        )
-
-        text_qa_function.add_environment("dynamodb_table_name", chat_table.table_name)
-        cdk.CfnOutput(self, 'text_chat_table_name', value=chat_table.table_name, export_name='TextChatTableName')
-
 
     def create_apigw_resource_method_for_multi_modal_qa(self, api, multi_modal_qa_function, chat_table):
 
@@ -963,54 +709,6 @@ class LambdaStack(Stack):
             ]
         )
 
-    def create_content_moderation_func(self):
-        _api_url_suffix = "_cn" if 'cn-' in os.getenv('AWS_REGION', '') else ""
-        content_moderation_api = self.node.try_get_context(f"content_moderation_api{_api_url_suffix}")
-        # content_moderation_token = self.node.try_get_context("content_moderation_account_token_in_base64")
-        content_moderation_result_table = self.node.try_get_context("content_moderation_result_table")
-
-        _content_moderation_role_policy = _iam.PolicyStatement(
-            actions=[
-                'lambda:AWSLambdaBasicExecutionRole',
-                'secretsmanager:GetSecretValue',
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:DescribeLogGroups",
-                "logs:DescribeLogStreams",
-                "logs:PutLogEvents",
-                "logs:GetLogEvents",
-                "logs:FilterLogEvents"
-            ],
-            resources=['*']
-        )
-
-        content_moderation_role = _iam.Role(
-            self, 'content_moderation_role',
-            assumed_by=_iam.ServicePrincipal('lambda.amazonaws.com')
-        )
-        content_moderation_role.add_to_policy(_content_moderation_role_policy)
-
-        content_moderation_role.add_managed_policy(
-            _iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-        )
-
-        # add langchain processor for smart query and answer
-        function_name_content_moderation = 'content_moderation'
-        content_moderation_func = _lambda.Function(
-            self, function_name_content_moderation,
-            function_name=function_name_content_moderation,
-            runtime=_lambda.Runtime.PYTHON_3_9,
-            role=content_moderation_role,
-            layers=[self.langchain_processor_qa_layer],
-            code=_lambda.Code.from_asset('../lambda/' + function_name_content_moderation),
-            handler='lambda_function' + '.lambda_handler',
-            memory_size=256,
-            timeout=Duration.minutes(10),
-            reserved_concurrent_executions=10
-        )
-        content_moderation_func.add_environment("content_moderation_api", content_moderation_api)
-
-        return content_moderation_func
 
     def create_apigw_resource_method_for_knowledge_base_handler(self, api, **kwargs):
             knowledge_base_handler = api.root.add_resource('knowledge_base_handler')

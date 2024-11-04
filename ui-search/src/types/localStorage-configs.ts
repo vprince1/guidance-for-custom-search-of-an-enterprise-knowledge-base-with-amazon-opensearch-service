@@ -61,6 +61,7 @@ export type ILocLlmData = {
   type: LLM_DATA_TYPE;
   embeddingEndpoint: string;
   sagemakerEndpoint?: string;
+  rerankerEndpoint?: string;
   temperature: number;
   maxTokens: number;
   modelType: ISagemakerModelTypeValues | IThirdPartyApiModelTypeValues;

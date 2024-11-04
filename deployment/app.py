@@ -8,11 +8,8 @@ from lib.ss_lambdavpcstack import LambdaVPCStack
 from lib.ss_osstack import OpenSearchStack
 from lib.ss_osvpcstack import OpenSearchVPCStack
 from lib.ss_notebook import NotebookStack
-from lib.ss_botstack import BotStack
-from lib.ss_kendrastack import KendraStack
 from lib.ss_bedrockstack import BedrockStack
-from lib.ss_asr_stack import ASRStack
-from lib.ss_difystack import DifyStack
+
 ACCOUNT =  os.environ.get('AWS_ACCOUNT_ID')
 REGION = os.environ.get('AWS_REGION')
 
@@ -54,25 +51,16 @@ if app.node.try_get_context('vpc_deployment'):
     if REGION.find('cn') == -1: 
         bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 else:
-    if app.node.try_get_context('search_engine_opensearch'):
-        searchstack = OpenSearchStack(app, "OpenSearchStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-        search_engine_key = searchstack.search_domain_endpoint
-    else:
-        searchstack = KendraStack(app, "KendraStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-        search_engine_key = searchstack.kendra_index_id
+    
+    # searchstack = OpenSearchStack(app, "OpenSearchStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
+    # search_engine_key = searchstack.search_domain_endpoint
+    search_engine_key = 'search-smartsearch-7jyefxtpxjfdqyodpseeaq3zym.us-east-1.es.amazonaws.com'
     lambdastack = LambdaStack(app, "LambdaStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-    lambdastack.add_dependency(searchstack)
-    # if REGION.find('cn') == -1: 
-    #     bedrockstack = BedrockStack( app, "BedrockStack", env=env)
+    # lambdastack.add_dependency(searchstack)
+    
+    if REGION.find('cn') == -1: 
+        bedrockstack = BedrockStack( app, "BedrockStack", env=env)
 notebookstack = NotebookStack(app, "NotebookStack", search_engine_key=search_engine_key, env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 
-if('bot' in app.node.try_get_context("extension")):
-    botstack = BotStack(app, "BotStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-    botstack.add_dependency(lambdastack)
-if app.node.try_get_context("enable_asr"):
-    asrstack = ASRStack(app, "ASRStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
-
-if app.node.try_get_context('dify_deployment'):
-    difystack = DifyStack(app, "DifyStack", env=env, description="Guidance for Custom Search of an Enterprise Knowledge Base on AWS - (SO9251)")
 
 app.synth()
