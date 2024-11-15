@@ -23,6 +23,7 @@ Actions:
         - Run: ./.codecatalyst/init-runner.sh "${Secrets.USER_NAME}" "${Secrets.USER_EMAIL}" "${Secrets.USER_ID}" "${Secrets.PAT}" "${Secrets.SKIP_FOR_CUSTOMER}"
         #- Run: command -v cdk &> /dev/null && npm update -g aws-cdk || npm install -g aws-cdk; cdk --version
         - Run: cd deployment/
+        - Run: yum update -y
         - Run: yum install -y pip npm
         - Run: npm install -g aws-cdk@latest
         - Run: cdk --version
@@ -56,3 +57,4 @@ Actions:
       StackName: guidance-for-custom-search-of-an-enterprise-knowledge-base-with-amazon-opensearch-service
       Region: us-west-2
       CdkRootPath: deployment
+      CdkCliVersion: latest
