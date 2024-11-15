@@ -22,11 +22,10 @@ Actions:
         - Run: chmod u+x ./.codecatalyst/*.sh
         - Run: ./.codecatalyst/init-runner.sh "${Secrets.USER_NAME}" "${Secrets.USER_EMAIL}" "${Secrets.USER_ID}" "${Secrets.PAT}" "${Secrets.SKIP_FOR_CUSTOMER}"
         #- Run: command -v cdk &> /dev/null && npm update -g aws-cdk || npm install -g aws-cdk; cdk --version
+        - Run: cd deployment/
         - Run: yum install -y pip npm
         - Run: npm install -g aws-cdk@latest
         - Run: cdk --version
-        - Run: pip install -r ./.codecatalyst/requirements.txt
-        - Run: cd deployment/
         - Run: pip install -r requirements.txt
       Container:
         Registry: CODECATALYST
