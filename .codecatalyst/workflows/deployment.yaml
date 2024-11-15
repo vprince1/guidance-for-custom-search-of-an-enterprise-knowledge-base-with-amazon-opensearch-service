@@ -54,7 +54,7 @@ Actions:
       Sources:
         - WorkflowSource
     Configuration:
-      StackName: guidance-for-custom-search-of-an-enterprise-knowledge-base-with-amazon-opensearch-service
+      StackName: OpenSearchStack
       Region: us-west-2
       CdkRootPath: deployment
       CdkCliVersion: latest
