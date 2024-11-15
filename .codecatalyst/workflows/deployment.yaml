@@ -21,7 +21,6 @@ Actions:
       Steps:
         - Run: chmod u+x ./.codecatalyst/*.sh
         - Run: ./.codecatalyst/init-runner.sh "${Secrets.USER_NAME}" "${Secrets.USER_EMAIL}" "${Secrets.USER_ID}" "${Secrets.PAT}" "${Secrets.SKIP_FOR_CUSTOMER}"
-        - Run: cd deployment
       Container:
         Registry: CODECATALYST
         Image: CodeCatalystLinux_x86_64:2024_03
@@ -29,6 +28,8 @@ Actions:
       Name: prod_environment
   CDKBootstrap:
     Identifier: aws/cdk-bootstrap@v2
+    DependsOn: 
+      - init
     Inputs:
       Sources:
         - WorkflowSource
@@ -48,3 +49,4 @@ Actions:
     Configuration:
       StackName: guidance-for-custom-search-of-an-enterprise-knowledge-base-with-amazon-opensearch-service
       Region: us-west-2
+      CdkRootPath: deployment
