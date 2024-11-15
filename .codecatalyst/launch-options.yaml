@@ -1,0 +1,13 @@
+options:
+  - key: region
+    value: us-west-2
+    displayName: AWS Region
+    description: The AWS Region to deploy the guidance to.
+    displayType: region
+    possibleValues:
+      - eu-west-1
+      - us-west-2
+  - key: guidanceVersion
+    displayName: Guidance Version
+    description: Version of the Guidance
+    value: 'v1.0.0'

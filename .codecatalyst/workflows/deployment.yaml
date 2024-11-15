@@ -1,0 +1,53 @@
+Name: deployment
+SchemaVersion: '1.0'
+Triggers:
+  - Type: PUSH
+    Branches:
+      - main
+  - Type: SCHEDULE
+    Expression: "0 2 * * ? *"
+    Branches:
+      - main
+Compute:
+  Type: EC2
+  Fleet: Linux.x86-64.Large
+Actions:
+  init:
+    Identifier: aws/build@v1
+    Inputs:
+      Sources:
+        - WorkflowSource
+      Variables:
+        - Name: region
+    Configuration:
+      Steps:
+        - Run: export REGION=$region
+        - Run: chmod u+x ./.codecatalyst/*.sh
+        - Run: ./.codecatalyst/init-runner.sh "${Secrets.USER_NAME}" "${Secrets.USER_EMAIL}" "${Secrets.USER_ID}" "${Secrets.PAT}" "${Secrets.SKIP_FOR_CUSTOMER}"
+        - Run: cd deployment
+      Container:
+        Registry: CODECATALYST
+        Image: CodeCatalystLinux_x86_64:2024_03
+    Environment:
+      Name: prod_environment
+  CDKBootstrap:
+    Identifier: aws/cdk-bootstrap@v2
+    Inputs:
+      Sources:
+        - WorkflowSource
+    Environment:
+      Name: prod_environment
+    Configuration:
+      Region: {{region}}
+  CDKDeploy:
+    Identifier: aws/cdk-deploy@v2
+    DependsOn: 
+      - CDKBootstrap
+    Environment:
+      Name: prod_environment
+    Inputs:
+      Sources:
+        - WorkflowSource
+    Configuration:
+      StackName: guidance-for-custom-search-of-an-enterprise-knowledge-base-with-amazon-opensearch-service
+      Region: {{region}}
