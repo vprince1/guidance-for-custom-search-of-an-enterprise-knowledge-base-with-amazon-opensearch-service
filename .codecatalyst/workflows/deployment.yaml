@@ -17,11 +17,8 @@ Actions:
     Inputs:
       Sources:
         - WorkflowSource
-      Variables:
-        - Name: region
     Configuration:
       Steps:
-        - Run: export REGION=$region
         - Run: chmod u+x ./.codecatalyst/*.sh
         - Run: ./.codecatalyst/init-runner.sh "${Secrets.USER_NAME}" "${Secrets.USER_EMAIL}" "${Secrets.USER_ID}" "${Secrets.PAT}" "${Secrets.SKIP_FOR_CUSTOMER}"
         - Run: cd deployment
@@ -38,7 +35,7 @@ Actions:
     Environment:
       Name: prod_environment
     Configuration:
-      Region: {{region}}
+      Region: us-west-2
   CDKDeploy:
     Identifier: aws/cdk-deploy@v2
     DependsOn: 
@@ -50,4 +47,4 @@ Actions:
         - WorkflowSource
     Configuration:
       StackName: guidance-for-custom-search-of-an-enterprise-knowledge-base-with-amazon-opensearch-service
-      Region: {{region}}
+      Region: us-west-2
